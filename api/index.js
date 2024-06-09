@@ -93,7 +93,7 @@ app.post('/login', async (req, res) => {
                         console.error('Error generating token:', err);
                         return res.status(500).json({ message: 'Error generating token' });
                     }
-                    res.cookie('token', token, ).json(userDoc);
+                    res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'Strict', maxAge: 15 * 60 * 1000 }).json(userDoc);
                 });
             } else {
                 res.status(401).json({ message: 'Wrong password!' });
@@ -106,53 +106,33 @@ app.post('/login', async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 });
-app.get('/profile', (req, res) => {
-    const { token } = req.cookies;
-    if (token) {
-        jwt.verify(token, jwtSecret, {}, async (err, userData) => {
-            if (err) {
-                console.error('Token verification failed:', err);
-                return res.status(401).json({ message: 'Invalid token' });
-            }
-            try {
-                const { name, email, _id } = await User.findById(userData.id);
-                res.json({ name, email, _id });
-            } catch (error) {
-                console.error('Error retrieving user:', error);
-                res.status(500).json({ message: 'Error retrieving user' });
-            }
-        })
-    } else {
-        res.json(null)
+app.get('/profile', authenticateToken, async (req, res) => {
+    try {
+        const { name, email, _id } = await User.findById(req.user.id);
+        res.json({ name, email, _id });
+    } catch (error) {
+        console.error('Error retrieving user:', error);
+        res.status(500).json({ message: 'Error retrieving user' });
     }
 });
 
-app.post('/note', (req, res) => {
+app.post('/note', authenticateToken, async (req, res) => {
     const { owner, note } = req.body;
-    const { token } = req.cookies;
-    if (token) {
-        jwt.verify(token, jwtSecret, {}, async (err, userData) => {
-            if (err) {
-                console.error('Token verification failed:', err);
-                return res.status(401).json({ message: 'Invalid token' });
-            }
-            try {
-                await Note.create({
-                    owner,
-                    note,
-                });
-                res.status(201).json('Note added succesfully');
-            } catch (e) {
-                console.error('Error adding note:', e);
-                res.status(422).json(e);
-            }
+    try {
+        const newNote = await Note.create({
+            owner,
+            note,
         });
-    } else {
-        res.status(401).json('Access denied!', token);
+        res.status(201).json({ message: 'Note added successfully', note: newNote });
+    } catch (e) {
+        console.error('Error adding note:', e);
+        res.status(422).json(e);
     }
-})
+});
+
 app.post('/logout', (req, res) => {
-    res.cookie('token', '', { httpOnly: true }).json({ message: 'Logged out' });
+    res.cookie('token', '', { httpOnly: true, secure: true, sameSite: 'Strict', maxAge: 0 });
+    res.json({ message: 'Logged out' });
 });
 
 // Start Server
