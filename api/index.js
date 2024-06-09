@@ -119,7 +119,7 @@ app.post('/note', (req, res) => {
             }
         });
     } else {
-        res.status(401).json('please login to add a note');
+        res.status(401).json('Access denied!');
     }
 })
 
