@@ -32,7 +32,7 @@ app.use(cookieParser());
 app.use(cors({
     credentials: true,
     methods:['POST', 'GET'],
-    origin: 'http://localhost:5173',
+    origin: 'https:vercel-mern-frontend.vercel.app',
 }));
 
 // Routes
