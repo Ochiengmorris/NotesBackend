@@ -14,7 +14,8 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const salt = bcrypt.genSaltSync(10);
 const jwtSecret = 'iodniwdjhcniwdjscnxedowkcnedwcknwdoc';
-const jwtExpiresIn = '1h';
+const jwtExpiresIn = '15m';
+const jwtRefreshExpiresIn = '7d';
 const PORT = process.env.PORT || 8001;
 const MONGO = process.env.MONGO
 
@@ -35,6 +36,20 @@ app.use(cors({
     origin: ['https://vercel-mern-frontend.vercel.app'],
 }));
 
+// Authentication Middleware
+const authenticateToken = (req, res, next) => {
+    const token = req.cookies.token;
+    if (token) {
+        jwt.verify(token, jwtSecret, (err, userData) => {
+            if (err) return res.status(401).json({ message: 'Invalid token' });
+            req.user = userData;// Attach user to request object
+            next();
+        });
+    } else {
+        res.status(401).json({ message: 'Access denied' });
+    }
+};
+
 // Routes
 app.get('/', async (req, res) => {
     try {
@@ -42,7 +57,7 @@ app.get('/', async (req, res) => {
         // console.log(AllNotes);
         res.json(AllNotes);
     } catch (error) {
-        console.error('Error retrieving places:', error);
+        console.error('Error retrieving notes:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
@@ -55,7 +70,7 @@ app.post('/register', async (req, res) => {
             email,
             password: bcrypt.hashSync(password, salt),
         });
-        res.status(200).json(userDoc);
+        res.status(201).json(userDoc);
     } catch (e) {
         res.status(422).json(e);
     }
@@ -78,7 +93,7 @@ app.post('/login', async (req, res) => {
                         console.error('Error generating token:', err);
                         return res.status(500).json({ message: 'Error generating token' });
                     }
-                    res.cookie('token', token, { httpOnly: true }).json(userDoc);
+                    res.cookie('token', token, ).json(userDoc);
                 });
             } else {
                 res.status(401).json({ message: 'Wrong password!' });
