@@ -14,6 +14,7 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const salt = bcrypt.genSaltSync(10);
 const jwtSecret = 'iodniwdjhcniwdjscnxedowkcnedwcknwdoc';
+const jwtExpiresIn = '1h';
 const PORT = process.env.PORT || 8001;
 const MONGO = process.env.MONGO
 
@@ -61,23 +62,26 @@ app.post('/register', async (req, res) => {
 
 });
 app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
+    }
+
     try {
-        const { email, password } = req.body;
-        if (!email || !password) {
-            return res.status(400).json({ message: 'Email and password are required' });
-        }
-        const userDoc = await User.findOne({ email: email });
+        const userDoc = await User.findOne({ email });
         if (userDoc) {
-            const passGood = bcrypt.compareSync(password, userDoc.password);
+            const passGood = await bcrypt.compare(password, userDoc.password);
             if (passGood) {
-                jwt.sign({ email: userDoc.email, id: userDoc._id }, jwtSecret, {}, (err, token) => {
+                jwt.sign({ email: userDoc.email, id: userDoc._id }, jwtSecret, { expiresIn: jwtExpiresIn }, (err, token) => {
                     if (err) {
-                        throw err;
+                        console.error('Error generating token:', err);
+                        return res.status(500).json({ message: 'Error generating token' });
                     }
-                    res.cookie('token', token).json(userDoc);
+                    res.cookie('token', token, { httpOnly: true }).json(userDoc);
                 });
             } else {
-                res.status(422).json('wrong password!');
+                res.status(401).json({ message: 'Wrong password!' });
             }
         } else {
             res.status(404).json({ message: 'User not found' });
@@ -86,35 +90,45 @@ app.post('/login', async (req, res) => {
         console.error('Error during login:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
-
 });
 app.get('/profile', (req, res) => {
     const { token } = req.cookies;
     if (token) {
         jwt.verify(token, jwtSecret, {}, async (err, userData) => {
-            if (err) throw err;
-            const { name, email, _id } = await User.findById(userData.id)
-            res.json({ name, email, _id });
+            if (err) {
+                console.error('Token verification failed:', err);
+                return res.status(401).json({ message: 'Invalid token' });
+            }
+            try {
+                const { name, email, _id } = await User.findById(userData.id);
+                res.json({ name, email, _id });
+            } catch (error) {
+                console.error('Error retrieving user:', error);
+                res.status(500).json({ message: 'Error retrieving user' });
+            }
         })
     } else {
         res.json(null)
     }
 });
-app.post('/logout', (req, res) => {
-    res.cookie('token', '').json(true);
-});
+
 app.post('/note', (req, res) => {
     const { owner, note } = req.body;
     const { token } = req.cookies;
     if (token) {
         jwt.verify(token, jwtSecret, {}, async (err, userData) => {
+            if (err) {
+                console.error('Token verification failed:', err);
+                return res.status(401).json({ message: 'Invalid token' });
+            }
             try {
                 await Note.create({
                     owner,
                     note,
                 });
-                res.status(200).json('note added succesfully');
+                res.status(201).json('Note added succesfully');
             } catch (e) {
+                console.error('Error adding note:', e);
                 res.status(422).json(e);
             }
         });
@@ -122,6 +136,9 @@ app.post('/note', (req, res) => {
         res.status(401).json('Access denied!', token);
     }
 })
+app.post('/logout', (req, res) => {
+    res.cookie('token', '', { httpOnly: true }).json({ message: 'Logged out' });
+});
 
 // Start Server
 app.listen(PORT, () => {
