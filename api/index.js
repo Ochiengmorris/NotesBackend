@@ -119,7 +119,7 @@ app.post('/note', (req, res) => {
             }
         });
     } else {
-        res.status(401).json('Access denied!');
+        res.status(401).json('Access denied!', token);
     }
 })
 
