@@ -1,5 +1,16 @@
 {
+   "version": 2,
    "rewrites":  [
-       {"source": "/(.*)", "destination": "/"}
-    ]
+       { "src": "/login", "destination": "/" },
+        { "src": "/register", "destination": "/" },
+        { "src": "/profile", "destination": "/" },
+        { "src": "/", "destination": "/" }
+    ],
+   "builds": [{ "src": "*.js", "use": "@vercel/node" }],
+   "routes": [
+        { "src": "/login", "destination": "/" },
+        { "src": "/register", "destination": "/" },
+        { "src": "/profile", "destination": "/" },
+        { "src": "/", "destination": "/" }
+]
 }
