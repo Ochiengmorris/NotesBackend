@@ -71,11 +71,19 @@ app.post('/login', async (req, res) => {
         if (userDoc) {
             const passGood = await bcrypt.compare(password, userDoc.password);
             if (passGood) {
-                jwt.sign({ email: userDoc.email, id: userDoc._id }, jwtSecret, {}, (err, token) => {
+                jwt.sign({ email: userDoc.email, id: userDoc._id }, jwtSecret, { expiresIn: '24h' }, (err, token) => {
                     if (err) {
                         throw err;
                     }
-                    res.cookie('token', token, { httpOnly: true, sameSite: 'Strict', maxAge: 24 * 60 * 60 * 1000 }).json(userDoc);
+                    const isProduction = process.env.NODE_ENV === 'production';
+                    res.cookie('token', token,
+                        {
+                            httpOnly: true,
+                            secure: isProduction,
+                            sameSite: 'Strict',
+                            maxAge: 24 * 60 * 60 * 1000,
+                            path: '/'
+                        }).json(userDoc);
                 });
             } else {
                 res.status(422).json({ message: 'Invalid email or password!' });
@@ -87,7 +95,6 @@ app.post('/login', async (req, res) => {
         console.error('Error during login:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
-
 });
 app.get('/profile', (req, res) => {
     const { token } = req.cookies;
