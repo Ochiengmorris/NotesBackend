@@ -80,9 +80,8 @@ app.post('/login', async (req, res) => {
                         {
                             httpOnly: true,
                             secure: isProduction,
-                            sameSite: 'Strict',
-                            maxAge: 24 * 60 * 60 * 1000,
-                            path: '/'
+                            sameSite: 'None',
+                            maxAge: 24 * 60 * 60 * 1000
                         }).json(userDoc);
                 });
             } else {
