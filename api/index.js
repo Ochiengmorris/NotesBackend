@@ -13,7 +13,7 @@ const jwt = require('jsonwebtoken');
 
 const app = express();
 const salt = bcrypt.genSaltSync(10);
-const jwtSecret = 'iodniwdjhcniwdjscnxedowkcnedwcknwdoc';
+const jwtSecret = process.env.JWTSECRET || 'iodniwdjhcniwdjscnxedowkcnedwcknwdoc';
 const PORT = process.env.PORT || 8001;
 const MONGO = process.env.MONGO
 
