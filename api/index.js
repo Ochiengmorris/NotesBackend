@@ -108,8 +108,15 @@ app.get('/profile', (req, res) => {
     }
 });
 app.post('/logout', (req, res) => {
-    res.cookie('token', '').json(true);
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.cookie('token', '', {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: 'None',
+        maxAge: 0,
+    }).json({ message: 'Logged out' });
 });
+
 app.post('/note', (req, res) => {
     const { owner, note } = req.body;
     const { token } = req.cookies;
