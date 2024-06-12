@@ -136,6 +136,35 @@ app.post('/note', (req, res) => {
         res.status(401).json('please login to add a note');
     }
 })
+app.post('/change-password', async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+    const { token } = req.cookies;
+
+    if (!token) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    jwt.verify(token, jwtSecret, {}, async (err, userData) => {
+        if (err) return res.status(401).json({ message: 'Unauthorized' });
+
+        try {
+            const userDoc = await User.findById(userData.id);
+            const passGood = await bcrypt.compare(currentPassword, userDoc.password);
+
+            if (!passGood) {
+                return res.status(403).json({ message: 'Current password is incorrect' });
+            }
+
+            userDoc.password = bcrypt.hashSync(newPassword, salt);
+            await userDoc.save();
+
+            res.json({ message: 'Password updated successfully' });
+        } catch (error) {
+            console.error('Error changing password:', error);
+            res.status(500).json({ message: 'Internal server error' });
+        }
+    });
+})
 
 // Start Server
 app.listen(PORT, () => {
